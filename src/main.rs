@@ -1,3 +1,5 @@
+mod diagnostic;
+
 #[cfg(windows)]
 fn main() -> windows_service::Result<()> {
     sample_service::run()
@@ -9,6 +11,7 @@ mod sample_service {
         ffi::OsString,
         sync::mpsc,
         time::Duration,
+        thread
     };
     use windows_service::{
         define_windows_service,
@@ -24,7 +27,7 @@ mod sample_service {
     const SERVICE_TYPE: ServiceType = ServiceType::OWN_PROCESS;
 
     pub fn run() -> Result<()> {
-        // The service_dispathcer::start() function does the same thing in a typical window
+        // The service_dispatcher::start() function does the same thing in a typical window
         // service. That is:
         // (1) register service entry point to the service table
         // (2) call the service dispatcher to invoke the main function of the service.
@@ -73,7 +76,6 @@ mod sample_service {
         // Thus it will not return any state to the environment. The service just stopped if the
         // function returns. So if you want to record error message. You would better record in
         // windows event logs or in the customized log file.
-
         if let Err(_e) = run_service() {
             // Handle the error here. Logging maybe.
         }
@@ -166,12 +168,25 @@ mod sample_service {
         // ------------------------------------------------------------------------------
         let status_handle = service_control_handler::register(SERVICE_NAME, event_handler)?;
 
-        // Now we do (2)
+        // Now we do (4)
         //
         // Each time we update the service status we need to tell the service controller what
         // current status is, what kind of controls we can do next, what is the checkpoint value
-        // (when we support PENDING status)? 
-        // Tell the system that service is running
+        // (when we support PENDING status)?
+        //
+        // C++ equivalent
+        // ------------------------------------------------------------------------------
+        // ZeroMemory (&g_ServiceStatus, sizeof (g_ServiceStatus));
+        // g_ServiceStatus.dwServiceType = SERVICE_WIN32_OWN_PROCESS;
+        // g_ServiceStatus.dwControlsAccepted = SERVICE_ACCEPT_STOP;
+        // g_ServiceStatus.dwCurrentState = SERVICE_RUNNING;
+        // g_ServiceStatus.dwWin32ExitCode = 0;
+        // g_ServiceStatus.dwCheckPoint = 0;
+        //
+        // if (SetServiceStatus (g_StatusHandle, &g_ServiceStatus) == FALSE) {
+        //   return;
+        // }
+        // ------------------------------------------------------------------------------
         status_handle.set_service_status(ServiceStatus {
             service_type: SERVICE_TYPE,
             current_state: ServiceState::Running,
@@ -182,20 +197,34 @@ mod sample_service {
             process_id: None,
         })?;
 
-        // Do things async in the part.
+        let thread_handle = thread::spawn(move || {
+            match shutdown_rx.try_recv() {
+                Ok(_) | Err(mpsc::TryRecvError::Disconnected) => return,
+                Err(mpsc::TryRecvError::Empty) => ()
+            }
 
-        // This loop check stop event prioridcally
-        loop {
-            match shutdown_rx.recv_timeout(Duration::from_secs(1)) {
-                // Break the loop either upon stop or channel disconnect
-                Ok(_) | Err(mpsc::RecvTimeoutError::Disconnected) => break,
+            loop {
+                match shutdown_rx.try_recv() {
+                    Ok(_) | Err(mpsc::TryRecvError::Disconnected) => break,
+                    Err(mpsc::TryRecvError::Empty) => {
+                        crate::diagnostic::output_debug_string("Entering windows service loop");
+                        thread::sleep(Duration::from_secs(1));
+                    }
+                }
+            }
+        });
 
-                // Continue work if no events were received within the timeout
-                Err(mpsc::RecvTimeoutError::Timeout) => (),
-            };
+        match thread_handle.join() {
+            Err(_) => {
+                // We may want to record logs here. Since the next thing is to stop the service, so
+                // there is not need to exit here.
+            },
+
+            Ok(_) => () // Do nothing if joined successfully.
         }
 
-        // Tell the system that service has stopped.
+        // Now we do (9)
+        //
         status_handle.set_service_status(ServiceStatus {
             service_type: SERVICE_TYPE,
             current_state: ServiceState::Stopped,
@@ -206,6 +235,7 @@ mod sample_service {
             process_id: None,
         })?;
 
+        // Now we do (10)
         Ok(())
     }
 }
