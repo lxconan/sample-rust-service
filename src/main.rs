@@ -92,8 +92,10 @@ mod sample_service {
         // (5) Create a threat for the main service loop. Waiting for event to gracefully change serivce
         //     status.
         // (6) Waiting fo the main service loop to exit.
-        // (7) Change service status to stop.
-        // (8) Exit.
+        // (7) Change service status to stop pending.
+        // (8) Do some recycle work.
+        // (9) Change service status to stop.
+        // (10) Exit.
 
         // Now we do (1)
         // 
@@ -165,8 +167,10 @@ mod sample_service {
         let status_handle = service_control_handler::register(SERVICE_NAME, event_handler)?;
 
         // Now we do (2)
-        
-
+        //
+        // Each time we update the service status we need to tell the service controller what
+        // current status is, what kind of controls we can do next, what is the checkpoint value
+        // (when we support PENDING status)? 
         // Tell the system that service is running
         status_handle.set_service_status(ServiceStatus {
             service_type: SERVICE_TYPE,
