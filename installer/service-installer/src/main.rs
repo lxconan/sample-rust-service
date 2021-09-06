@@ -6,14 +6,27 @@ use crate::error::{InstallerError, InstallerResult};
 mod diagnostic;
 mod action_type;
 mod error;
+mod installer;
 
 fn main() -> Result<(), InstallerError> {
     let argument = match_arguments().or_else(print_error_and_forward)?;
-    let service_path = get_service_path(&argument).or_else(print_error_and_forward)?;
-
     println!("Will perform action: {} with the following arguments:", argument.action_type.as_str().cyan());
     println!("  Service name: {}", argument.service_name.as_str().cyan());
-    println!("  Service executable path: {}", service_path.as_str().cyan());
+
+    if &argument.action_type == action_type::INSTALL_WINDOWS_SERVICE {
+        let service_path = get_service_path(&argument).or_else(print_error_and_forward)?;
+        println!("  Service executable path: {}", service_path.as_str().cyan());
+
+        installer::install_windows_service(
+            &argument.service_name,
+            &argument.display_name,
+            &argument.description,
+            argument.auto_start,
+            &service_path
+        ).or_else(print_error_and_forward)?;
+    } else if &argument.action_type == action_type::UNINSTALL_WINDOWS_SERVICE {
+        installer::uninstall_windows_service(&argument.service_name).or_else(print_error_and_forward)?;
+    }
 
     InstallerResult::Ok(())
 }
@@ -36,13 +49,18 @@ fn get_service_path(argument: &Argument) -> Result<String, InstallerError> {
 struct Argument {
     action_type: String,
     executable_path: String,
-    service_name: String
+    service_name: String,
+    display_name: String,
+    description: String,
+    auto_start: bool
 }
 
 fn match_arguments() -> Result<Argument, InstallerError> {
-    const ACTION_TYPE_ARGUMENT:&str = "action type";
-    const SERVICE_PATH_ARGUMENT:&str = "service executable path";
     const SERVICE_NAME_ARGUMENT:&str = "service name";
+    const DISPLAY_NAME_ARGUMENT:&str = "display name";
+    const DESCRIPTION_ARGUMENT:&str = "description";
+    const AUTO_START_SWITCH:&str = "auto start";
+    const SERVICE_PATH_ARGUMENT:&str = "service executable path";
 
     let matches: ArgMatches = App::new("Windows Service Installer")
         .setting(AppSettings::SubcommandRequired)
@@ -50,12 +68,44 @@ fn match_arguments() -> Result<Argument, InstallerError> {
             SubCommand::with_name(action_type::INSTALL_WINDOWS_SERVICE)
                 .about("Install windows service on local machine.")
                 .arg(
+                    Arg::with_name(SERVICE_NAME_ARGUMENT)
+                        .long("name")
+                        .required(true)
+                        .multiple(false)
+                        .takes_value(true)
+                )
+                .arg(
+                    Arg::with_name(DISPLAY_NAME_ARGUMENT)
+                        .long("disp")
+                        .required(true)
+                        .multiple(false)
+                        .takes_value(true)
+                )
+                .arg(
+                    Arg::with_name(DESCRIPTION_ARGUMENT)
+                        .long("desc")
+                        .required(true)
+                        .multiple(false)
+                        .takes_value(true)
+                )
+                .arg(
+                    Arg::with_name(AUTO_START_SWITCH)
+                        .long("auto")
+                        .required(false)
+                        .multiple(false)
+                        .takes_value(false)
+                )
+                .arg(
                     Arg::with_name(SERVICE_PATH_ARGUMENT)
                         .long("bin")
                         .required(true)
                         .multiple(false)
                         .takes_value(true)
                 )
+        )
+        .subcommand(
+            SubCommand::with_name(action_type::UNINSTALL_WINDOWS_SERVICE)
+                .about("Uninstall windows service on local machine.")
                 .arg(
                     Arg::with_name(SERVICE_NAME_ARGUMENT)
                         .long("name")
@@ -71,7 +121,20 @@ fn match_arguments() -> Result<Argument, InstallerError> {
             Result::Ok(Argument {
                 action_type: String::from(action_type::INSTALL_WINDOWS_SERVICE),
                 executable_path: String::from(sub_command_matches.value_of(SERVICE_PATH_ARGUMENT).ok_or(InstallerError::new("Invalid service path argument."))?),
-                service_name: String::from(sub_command_matches.value_of(SERVICE_NAME_ARGUMENT).ok_or(InstallerError::new("Invalid service name."))?)
+                service_name: String::from(sub_command_matches.value_of(SERVICE_NAME_ARGUMENT).ok_or(InstallerError::new("Invalid service name."))?),
+                display_name: String::from(sub_command_matches.value_of(DISPLAY_NAME_ARGUMENT).ok_or(InstallerError::new("Invalid display name."))?),
+                description: String::from(sub_command_matches.value_of(DESCRIPTION_ARGUMENT).ok_or(InstallerError::new("Invalid description."))?),
+                auto_start: sub_command_matches.is_present(AUTO_START_SWITCH)
+            })
+        },
+        (action_type::UNINSTALL_WINDOWS_SERVICE, Some(sub_command_matches)) => {
+            Result::Ok(Argument {
+                action_type: String::from(action_type::UNINSTALL_WINDOWS_SERVICE),
+                executable_path: String::default(),
+                service_name: String::from(sub_command_matches.value_of(SERVICE_NAME_ARGUMENT).ok_or(InstallerError::new("Invalid service name."))?),
+                display_name: String::default(),
+                description: String::default(),
+                auto_start: false
             })
         },
         _ => Result::Err(InstallerError::new("Not supported command."))
