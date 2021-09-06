@@ -24,13 +24,13 @@ fn print_error_and_forward<T>(error: InstallerError) -> Result<T, InstallerError
 
 fn get_service_path(argument: &Argument) -> Result<String, InstallerError> {
     let absolute_path_result = std::path::Path::new(&argument.executable_path).absolutize();
-    let absolute_path = absolute_path_result.map_err(|e| { InstallerError::with(e,"Fail to get absolute path. ", 2) })?;
+    let absolute_path = absolute_path_result.map_err(|e| { InstallerError::with(e,"Fail to get absolute path. ") })?;
     if absolute_path.exists() {
         return Result::Ok(String::from(absolute_path.to_str().unwrap()));
     }
 
     let error_message = format!("The path {} does not exist.", &argument.executable_path);
-    return Result::Err(InstallerError::new(error_message, 2));
+    return Result::Err(InstallerError::new(error_message));
 }
 
 struct Argument {
@@ -70,10 +70,10 @@ fn match_arguments() -> Result<Argument, InstallerError> {
         (action_type::INSTALL_WINDOWS_SERVICE, Some(sub_command_matches)) => {
             Result::Ok(Argument {
                 action_type: String::from(action_type::INSTALL_WINDOWS_SERVICE),
-                executable_path: String::from(sub_command_matches.value_of(SERVICE_PATH_ARGUMENT).ok_or(InstallerError::new("Invalid service path argument.", 1))?),
-                service_name: String::from(sub_command_matches.value_of(SERVICE_NAME_ARGUMENT).ok_or(InstallerError::new("Invalid service name.", 1))?)
+                executable_path: String::from(sub_command_matches.value_of(SERVICE_PATH_ARGUMENT).ok_or(InstallerError::new("Invalid service path argument."))?),
+                service_name: String::from(sub_command_matches.value_of(SERVICE_NAME_ARGUMENT).ok_or(InstallerError::new("Invalid service name."))?)
             })
         },
-        _ => Result::Err(InstallerError::new("Not supported command.", 1))
+        _ => Result::Err(InstallerError::new("Not supported command."))
     }
 }
