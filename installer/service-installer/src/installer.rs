@@ -78,7 +78,7 @@ pub fn uninstall_windows_service(service_name:&str) -> Result<(), InstallerError
             println!("{}", "Done".green());
             println!("Current service status: {}", (service_status.current_state as u32).to_string().as_str().cyan());
             if service_status.current_state != ServiceState::Stopped {
-                println!("Current service is not stopped. Trying to stop serviceWe will wait for 1 second.");
+                println!("Current service is not stopped. Trying to stop service. We will wait for 1 second.");
                 thread::sleep(time::Duration::from_secs(1));
             } else {
                 println!("Current service stopped. Now we will try uninstall windows service.");
