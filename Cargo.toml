@@ -1,2 +1,2 @@
 [workspace]
-members = ["crates/sample-rust-service", "installer/service-installer"]
+members = ["crates/sample-rust-service", "installer/service-installer", "crates/sample-rust-service-core"]

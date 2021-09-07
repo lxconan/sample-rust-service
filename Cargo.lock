@@ -165,10 +165,15 @@ checksum = "61b3909d758bb75c79f23d4736fac9433868679d3ad2ea7a61e3c25cfda9a088"
 name = "sample-rust-service"
 version = "0.1.0"
 dependencies = [
+ "sample-rust-service-core",
  "widestring",
  "winapi",
  "windows-service",
 ]
+
+[[package]]
+name = "sample-rust-service-core"
+version = "0.1.0"
 
 [[package]]
 name = "service-installer"
