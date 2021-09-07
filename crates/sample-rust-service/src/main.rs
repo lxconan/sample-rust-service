@@ -93,7 +93,7 @@ mod sample_service {
         // (4) Set service status as running.
         // (5) Create a threat for the main service loop. Waiting for event to gracefully change serivce
         //     status.
-        // (6) Waiting fo the main service loop to exit.
+        // (6) Waiting for the main service loop to exit.
         // (7) Change service status to stop pending.
         // (8) Do some recycle work.
         // (9) Change service status to stop.
@@ -168,12 +168,25 @@ mod sample_service {
         // ------------------------------------------------------------------------------
         let status_handle = service_control_handler::register(SERVICE_NAME, event_handler)?;
 
-        // Now we do (4)
+        // 
+
+        // (2) Set service status as start pending.
         //
         // Each time we update the service status we need to tell the service controller what
         // current status is, what kind of controls we can do next, what is the checkpoint value
-        // (when we support PENDING status)?
-        //
+        status_handle.set_service_status(ServiceStatus {
+            service_type: SERVICE_TYPE,
+            current_state: ServiceState::StartPending,
+            controls_accepted: ServiceControlAccept::empty(),
+            exit_code: ServiceExitCode::Win32(0),
+            checkpoint: 1,
+            wait_hint: Duration::default(),
+            process_id: None,
+        })?;
+
+        // (3) Do some initialization work here.
+
+        // (4) Set service status as running.
         // C++ equivalent
         // ------------------------------------------------------------------------------
         // ZeroMemory (&g_ServiceStatus, sizeof (g_ServiceStatus));
@@ -190,13 +203,15 @@ mod sample_service {
         status_handle.set_service_status(ServiceStatus {
             service_type: SERVICE_TYPE,
             current_state: ServiceState::Running,
-            controls_accepted: ServiceControlAccept::STOP,
+            controls_accepted: ServiceControlAccept::STOP | ServiceControlAccept::PAUSE_CONTINUE,
             exit_code: ServiceExitCode::Win32(0),
             checkpoint: 0,
             wait_hint: Duration::default(),
             process_id: None,
         })?;
 
+        // (5) Create a threat for the main service loop. Waiting for event to gracefully change serivce
+        //     status.
         let thread_handle = thread::spawn(move || {
             match shutdown_rx.try_recv() {
                 Ok(_) | Err(mpsc::TryRecvError::Disconnected) => return,
@@ -205,10 +220,13 @@ mod sample_service {
 
             loop {
                 match shutdown_rx.try_recv() {
-                    Ok(_) | Err(mpsc::TryRecvError::Disconnected) => break,
+                    Ok(_) | Err(mpsc::TryRecvError::Disconnected) => {
+                        crate::diagnostic::output_debug_string("Ok or Disconnected received");
+                        break;
+                    }
                     Err(mpsc::TryRecvError::Empty) => {
                         crate::diagnostic::output_debug_string("Entering windows service loop");
-                        thread::sleep(Duration::from_secs(1));
+                        thread::sleep(Duration::from_secs(10));
                     }
                 }
             }
@@ -222,9 +240,21 @@ mod sample_service {
 
             Ok(_) => () // Do nothing if joined successfully.
         }
+        // (6) Waiting for the main service loop to exit.
+        // (7) Change service status to stop pending.
+        status_handle.set_service_status(ServiceStatus {
+            service_type: SERVICE_TYPE,
+            current_state: ServiceState::StopPending,
+            controls_accepted: ServiceControlAccept::empty(),
+            exit_code: ServiceExitCode::Win32(0),
+            checkpoint: 1,
+            wait_hint: Duration::default(),
+            process_id: None,
+        })?;
 
-        // Now we do (9)
-        //
+        // (8) Do some recycle work here.
+
+        // (9) Change service status to stop.
         status_handle.set_service_status(ServiceStatus {
             service_type: SERVICE_TYPE,
             current_state: ServiceState::Stopped,
@@ -235,7 +265,7 @@ mod sample_service {
             process_id: None,
         })?;
 
-        // Now we do (10)
+        // (10) Exit.
         Ok(())
     }
 }
