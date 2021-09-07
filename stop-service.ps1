@@ -1,0 +1,1 @@
+sc.exe stop "sample-rust-service"
