@@ -7,6 +7,7 @@ use windows_service::{
 use std::thread;
 use std::time;
 use colored::Colorize;
+use windows_service::service::{Service, ServiceStatus};
 
 pub fn install_windows_service(
     service_name:&str,
@@ -16,8 +17,9 @@ pub fn install_windows_service(
     service_binary_path:&str) -> Result<(), InstallerError> {
     println!("Attempt to install windows service: {}", service_name.cyan());
 
-    let manager_access = ServiceManagerAccess::CONNECT | ServiceManagerAccess::CREATE_SERVICE;
-    let service_manager = get_service_manager(manager_access)?;
+    print!("Connecting to service manager...");
+    let service_manager = get_service_manager(ServiceManagerAccess::CONNECT | ServiceManagerAccess::CREATE_SERVICE)?;
+    println!("{}", "Done".green());
 
     let service_info = ServiceInfo {
         name: OsString::from(service_name),
@@ -32,70 +34,96 @@ pub fn install_windows_service(
         account_password: None,
     };
 
+    print!("Creating windows service {} for {}...", service_name.cyan(), service_binary_path.cyan());
     let service = service_manager.create_service(&service_info, ServiceAccess::CHANGE_CONFIG)
         .or_else(|e| { Result::Err(InstallerError::with(e, "Fail to create Windows Service. ")) })?;
     service.set_description(description).or_else(|e| {
         Result::Err(InstallerError::with(e, "Fail to set service description. "))
     })?;
+    println!("{}", "Done".green());
     Ok(())
-}
-
-fn get_service_manager(manager_access: ServiceManagerAccess) -> Result<ServiceManager, InstallerError> {
-    ServiceManager::local_computer(None::<&str>, manager_access)
-        .map_err(|e| { InstallerError::with(e, "Fail to get service manager. ") })
 }
 
 pub fn uninstall_windows_service(service_name:&str) -> Result<(), InstallerError> {
     println!("Attempt to uninstall windows service: {}", service_name.cyan());
 
     print!("Connecting to service manager...");
-    let manager_access = ServiceManagerAccess::CONNECT;
-    let service_manager = get_service_manager(manager_access)?;
+    let service_manager = get_service_manager(ServiceManagerAccess::CONNECT)?;
     println!("{}", "Done".green());
 
-    print!("Connecting to windows service...");
-    let service_access = ServiceAccess::QUERY_STATUS | ServiceAccess::STOP | ServiceAccess::DELETE;
-    let service = service_manager.open_service(service_name, service_access)
-        .or_else(|e| { Result::Err(InstallerError::with(e, "Fail to get windows service. Cannot uninstall service. ")) })?;
+    print!("Connecting to windows service '{}'...", service_name.cyan());
+    let service = open_windows_service(
+        service_name, &service_manager, ServiceAccess::QUERY_STATUS | ServiceAccess::STOP | ServiceAccess::DELETE)?;
     println!("{}", "Done".green());
 
-    print!("Query service status...");
-    let service_status = service.query_status()
-        .or_else(|e| { Result::Err(InstallerError::with(e, "Fail to query service status. Cannot uninstall service. ")) })?;
+    print!("Query service status for {} ...", service_name.cyan());
+    let service_status = query_service_status(&service)?;
     println!("{}", "Done".green());
     println!("Current service status: {}", (service_status.current_state as u32).to_string().as_str().cyan());
+
     if service_status.current_state != ServiceState::Stopped {
-        println!("Current service is not stopped. Trying to stop service");
-        service.stop().or_else(|e| { Result::Err(InstallerError::with(e, "Stop service failed. Cannot uninstall service. ")) })?;
+        print!("Trying to stop service...");
+        internal_stop_service(&service)?;
+        println!("{}", "Done".green());
 
-        println!("Waiting for service to stop.");
-
-        let mut timeout: bool = true;
-        for _ in 0..20 {
-            print!("Query service status...");
-            let service_status = service.query_status()
-                .or_else(|e| { Result::Err(InstallerError::with(e, "Fail to query service status. Cannot uninstall service. ")) })?;
-            println!("{}", "Done".green());
-            println!("Current service status: {}", (service_status.current_state as u32).to_string().as_str().cyan());
-            if service_status.current_state != ServiceState::Stopped {
-                println!("Current service is not stopped. Trying to stop service. We will wait for 1 second.");
-                thread::sleep(time::Duration::from_secs(1));
-            } else {
-                println!("Current service stopped. Now we will try uninstall windows service.");
-                timeout = false;
-                break;
-            }
-        }
-        if timeout {
-            return Result::Err(InstallerError::new("Timeout reached. Cannot uninstall service."));
-        }
+        print!("Waiting for service to stop");
+        wait_for_service_status(&service, ServiceState::Stopped, 20, || { print!("."); })?;
+        println!("{}", "Done".green());
     } else {
         println!("Current service stopped. Now we will try uninstall windows service.");
     }
 
-    print!("Uninstalling service ...");
-    service.delete().or_else(|e| { Result::Err(InstallerError::with(e, "Fail to uninstall service. ")) })?;
+    print!("Uninstalling service {} ...", service_name.cyan());
+    internal_uninstall_windows_service(service)?;
     println!("{}", "Done".green());
 
     Ok(())
+}
+
+fn internal_stop_service(service: &Service) -> Result<(), InstallerError> {
+    let result = service.stop()
+        .or_else(|e| { Result::Err(InstallerError::with(e, "Stop service failed. ")) });
+    result.and_then(|_| { Result::Ok(()) }).or_else(|e| { Result::Err(e) })
+}
+
+fn internal_uninstall_windows_service(service:Service) -> Result<(), InstallerError> {
+    let result = service.delete().or_else(|e| { Result::Err(InstallerError::with(e, "Fail to uninstall service. ")) });
+    result
+}
+
+fn wait_for_service_status(service:&Service, desired_state:ServiceState, total_seconds:u32, progress:fn()) -> Result<(), InstallerError> {
+    let mut timeout: bool = true;
+    for _ in 0..total_seconds {
+        progress();
+        let service_status = query_service_status(service)?;
+
+        if service_status.current_state != desired_state {
+            thread::sleep(time::Duration::from_secs(1));
+        } else {
+            timeout = false;
+            break;
+        }
+    }
+    if timeout {
+        return Result::Err(InstallerError::new("Timeout reached. Waiting failed. "));
+    }
+
+    Ok(())
+}
+
+fn query_service_status(service: &Service) -> Result<ServiceStatus, InstallerError> {
+    let service_status = service.query_status()
+        .or_else(|e| { Result::Err(InstallerError::with(e, "Fail to query service status. ")) });
+    service_status
+}
+
+fn open_windows_service(service_name:&str, service_manager:&ServiceManager, service_access:ServiceAccess) -> Result<Service, InstallerError> {
+    let service_result = service_manager.open_service(service_name, service_access)
+        .or_else(|e| { Result::Err(InstallerError::with(e, "Fail to get windows service. ")) });
+    service_result
+}
+
+fn get_service_manager(manager_access: ServiceManagerAccess) -> Result<ServiceManager, InstallerError> {
+    ServiceManager::local_computer(None::<&str>, manager_access)
+        .map_err(|e| { InstallerError::with(e, "Fail to get service manager. ") })
 }
