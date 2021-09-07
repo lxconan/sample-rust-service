@@ -9,6 +9,8 @@ use std::time;
 use colored::Colorize;
 use windows_service::service::{Service, ServiceStatus};
 
+const DEFAULT_TIMEOUT:u32 = 20;
+
 pub fn install_windows_service(
     service_name:&str,
     display_name:&str,
@@ -67,7 +69,7 @@ pub fn uninstall_windows_service(service_name:&str) -> Result<(), InstallerError
         println!("{}", "Done".green());
 
         print!("Waiting for service to stop");
-        wait_for_service_status(&service, ServiceState::Stopped, 20, || { print!("."); })?;
+        wait_for_service_status(&service, ServiceState::Stopped, DEFAULT_TIMEOUT, || { print!("."); })?;
         println!("{}", "Done".green());
     } else {
         println!("Current service stopped. Now we will try uninstall windows service.");
