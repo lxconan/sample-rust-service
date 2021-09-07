@@ -9,7 +9,7 @@ impl InstallerError {
     }
 
     pub fn with<T: std::error::Error>(error: T, message: &str) -> InstallerError {
-        InstallerError { message: format!("{} -> {}", message, error), }
+        InstallerError { message: format!("{} -> {:?}", message, error), }
     }
 }
 
