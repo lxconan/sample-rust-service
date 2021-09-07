@@ -55,6 +55,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "diagnostic"
+version = "0.1.0"
+dependencies = [
+ "widestring",
+ "winapi",
+]
+
+[[package]]
 name = "err-derive"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -165,6 +173,7 @@ checksum = "61b3909d758bb75c79f23d4736fac9433868679d3ad2ea7a61e3c25cfda9a088"
 name = "sample-rust-service"
 version = "0.1.0"
 dependencies = [
+ "diagnostic",
  "sample-rust-service-core",
  "widestring",
  "winapi",
@@ -174,6 +183,11 @@ dependencies = [
 [[package]]
 name = "sample-rust-service-core"
 version = "0.1.0"
+dependencies = [
+ "diagnostic",
+ "winapi",
+ "windows-service",
+]
 
 [[package]]
 name = "service-installer"

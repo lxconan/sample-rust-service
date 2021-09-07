@@ -1,5 +1,3 @@
-mod diagnostic;
-
 #[cfg(windows)]
 fn main() -> windows_service::Result<()> {
     sample_service::run()
@@ -167,7 +165,7 @@ mod sample_service {
         // g_StatusHandle = RegisterServiceCtrlHandler (SERVICE_NAME, EventHandler);
         // ------------------------------------------------------------------------------
         let status_handle = service_control_handler::register(SERVICE_NAME, event_handler)?;
-
+        diagnostic::output_debug_string("register service");
         // 
 
         // (2) Set service status as start pending.
@@ -185,6 +183,7 @@ mod sample_service {
         })?;
 
         // (3) Do some initialization work here.
+        sample_rust_service_core::core_service_init();
 
         // (4) Set service status as running.
         // C++ equivalent
@@ -213,23 +212,7 @@ mod sample_service {
         // (5) Create a threat for the main service loop. Waiting for event to gracefully change serivce
         //     status.
         let thread_handle = thread::spawn(move || {
-            match shutdown_rx.try_recv() {
-                Ok(_) | Err(mpsc::TryRecvError::Disconnected) => return,
-                Err(mpsc::TryRecvError::Empty) => ()
-            }
-
-            loop {
-                match shutdown_rx.try_recv() {
-                    Ok(_) | Err(mpsc::TryRecvError::Disconnected) => {
-                        crate::diagnostic::output_debug_string("Ok or Disconnected received");
-                        break;
-                    }
-                    Err(mpsc::TryRecvError::Empty) => {
-                        crate::diagnostic::output_debug_string("Entering windows service loop");
-                        thread::sleep(Duration::from_secs(10));
-                    }
-                }
-            }
+            sample_rust_service_core::core_service_process(shutdown_rx);
         });
 
         match thread_handle.join() {
@@ -253,6 +236,7 @@ mod sample_service {
         })?;
 
         // (8) Do some recycle work here.
+        sample_rust_service_core::core_service_stop();
 
         // (9) Change service status to stop.
         status_handle.set_service_status(ServiceStatus {
@@ -264,6 +248,7 @@ mod sample_service {
             wait_hint: Duration::default(),
             process_id: None,
         })?;
+        diagnostic::output_debug_string("stop service");
 
         // (10) Exit.
         Ok(())

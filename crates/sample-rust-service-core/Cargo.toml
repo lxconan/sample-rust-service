@@ -6,3 +6,10 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+windows-service="0.4.0"
+diagnostic= { path = "../diagnostic" }
+
+[dependencies.winapi]
+version = "0.3.9"
+default-features = true
+features = ["debugapi"]
