@@ -168,8 +168,7 @@ mod sample_service {
         // ------------------------------------------------------------------------------
         let status_handle = service_control_handler::register(SERVICE_NAME, event_handler)?;
 
-        // 
-
+        //
         // (2) Set service status as start pending.
         //
         // Each time we update the service status we need to tell the service controller what

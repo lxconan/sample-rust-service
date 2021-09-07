@@ -10,7 +10,8 @@ use windows_service::service_manager::{ServiceManager, ServiceManagerAccess};
 
 pub struct WindowsServiceOperatingContext {
     _service_manager: ServiceManager,
-    service: Service
+    service: Service,
+    pub service_name: String
 }
 
 impl WindowsServiceOperatingContext {
@@ -20,7 +21,8 @@ impl WindowsServiceOperatingContext {
 
         Result::Ok(WindowsServiceOperatingContext {
             _service_manager: service_manager,
-            service
+            service,
+            service_name: String::from(service_name)
         })
     }
 
