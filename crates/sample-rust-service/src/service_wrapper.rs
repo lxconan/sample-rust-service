@@ -18,13 +18,15 @@ use windows_service::service_control_handler::ServiceStatusHandle;
 const SERVICE_NAME: &str = "sample_service";
 const SERVICE_TYPE: ServiceType = ServiceType::OWN_PROCESS;
 
-static mut APPLICATION:Option<&dyn sample_rust_service_core::application::Application> = None;
+static mut APPLICATION:Option<Box<dyn sample_rust_service_core::application::Application>> = None;
 
-fn get_application() -> &'static dyn sample_rust_service_core::application::Application {
-    unsafe { APPLICATION.unwrap() }
+fn get_application() -> &'static Box<dyn sample_rust_service_core::application::Application> {
+    unsafe {
+        APPLICATION.as_ref().unwrap()
+    }
 }
 
-fn initialize_application(application:&'static dyn sample_rust_service_core::application::Application) -> ServiceResult<()> {
+fn initialize_application(application:Box<dyn sample_rust_service_core::application::Application>) -> ServiceResult<()> {
     unsafe {
         if APPLICATION.is_some() {
             return ServiceResult::Err(ServiceError::new("The application has already been initialized."));
@@ -35,7 +37,7 @@ fn initialize_application(application:&'static dyn sample_rust_service_core::app
     Ok(())
 }
 
-pub fn run(application:&'static dyn sample_rust_service_core::application::Application) -> ServiceResult<()> {
+pub fn run(application:Box<dyn sample_rust_service_core::application::Application>) -> ServiceResult<()> {
     // The service_dispatcher::start() function does the same thing in a typical window
     // service. That is:
     // (1) register service entry point to the service table
