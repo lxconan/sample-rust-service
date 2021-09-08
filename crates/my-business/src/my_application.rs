@@ -7,6 +7,9 @@ use std::time::Duration;
 
 pub struct Application {}
 
+unsafe impl Sync for Application {
+}
+
 impl sample_rust_service_core::application::Application for Application {
     fn handle_error(&self, _error: &ServiceError) {
         output_debug_string("Application::handle_error() called");

@@ -14,12 +14,11 @@ use windows_service::{
 };
 use sample_rust_service_core::error::{ServiceResult, ServiceError};
 use windows_service::service_control_handler::ServiceStatusHandle;
-use sample_rust_service_core::application::Application;
 
 const SERVICE_NAME: &str = "sample_service";
 const SERVICE_TYPE: ServiceType = ServiceType::OWN_PROCESS;
 
-static APPLICATION:my_business::my_application::Application = my_business::my_application::Application {};
+static APPLICATION:&dyn sample_rust_service_core::application::Application = &my_business::my_application::Application {};
 
 pub fn run() -> ServiceResult<()> {
     // The service_dispatcher::start() function does the same thing in a typical window
@@ -186,7 +185,7 @@ fn run_service() -> ServiceResult<()> {
     set_service_status_with_empty_control(&status_handle, ServiceState::StopPending)?;
 
     // (8) Do some recycle work here.
-    APPLICATION.shutting_down()?;
+    APPLICATION.shutting_down();
 
     // (9) Change service status to stop.
     set_service_status_with_empty_control(&status_handle, ServiceState::Stopped)?;
