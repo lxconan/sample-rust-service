@@ -12,20 +12,6 @@ use std::io::Write;
 
 pub const DEFAULT_TIMEOUT:u32 = 20;
 
-pub fn install_windows_service(
-    service_name:&str,
-    display_name:&str,
-    description:&str,
-    auto_start:bool,
-    service_binary_path:&str) -> Result<(), InstallerError> {
-    println!("Attempt to install windows service: {}", service_name.cyan());
-
-    print!("Creating windows service ...");
-    WindowsServiceOperatingContext::create_windows_service(service_name, display_name, description, auto_start, service_binary_path)?;
-    println!("{}", "Done".green());
-    Ok(())
-}
-
 pub fn uninstall_windows_service(service_name:&str) -> Result<(), InstallerError> {
     println!("Attempt to uninstall windows service: {}", service_name.cyan());
 
