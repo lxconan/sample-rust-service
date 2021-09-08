@@ -7,3 +7,4 @@ edition = "2018"
 
 [dependencies]
 sample-rust-service-core= { path = "../sample-rust-service-core" }
+zmq = "0.9"

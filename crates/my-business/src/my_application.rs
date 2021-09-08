@@ -29,7 +29,7 @@ impl sample_rust_service_core::application::Application for Application {
                 }
                 Err(mpsc::TryRecvError::Empty) => {
                     sample_rust_service_core::diagnostic::output_debug_string("Entering windows service loop");
-                    thread::sleep(Duration::from_secs(2));
+                    run_zeromq_server();
                 }
             }
         }
@@ -39,5 +39,23 @@ impl sample_rust_service_core::application::Application for Application {
 
     fn shutting_down(&self) {
         output_debug_string("Application::shutting_down() called");
+    }
+}
+
+fn run_zeromq_server() {
+    let context = zmq::Context::new();
+    let responder = context.socket(zmq::REP).unwrap();
+
+    assert!(responder.bind("tcp://*:5555").is_ok());
+
+    let mut msg = zmq::Message::new();
+    let mut message_cnt = 0;
+    loop {
+        responder.recv(&mut msg, 0).unwrap();
+        message_cnt = message_cnt + 1;
+        println!("Received message {} : \"{}\"", message_cnt, msg.as_str().unwrap());
+        thread::sleep(Duration::from_millis(1000));
+        responder.send("Hello to client", 0).unwrap();
+        println!("Sending Hello to client ...");
     }
 }
