@@ -2,15 +2,14 @@ use crate::features::feature_traits::Feature;
 use clap::{App, SubCommand, Arg, ArgMatches};
 use crate::arguments::Argument;
 use crate::error::{InstallerResult, InstallerError};
-use crate::service_wrapper::WindowsServiceOperatingContext;
+use crate::features::service_wrapper::WindowsServiceOperatingContext;
 use colored::Colorize;
 use path_absolutize::Absolutize;
-use super::common;
 
 pub struct InstallServiceFeature {
 }
 
-pub const INSTALL_WINDOWS_SERVICE: &str = "create";
+const INSTALL_WINDOWS_SERVICE: &str = "create";
 const SERVICE_NAME_ARGUMENT:&str = "service name";
 const DISPLAY_NAME_ARGUMENT:&str = "display name";
 const DESCRIPTION_ARGUMENT:&str = "description";
@@ -76,7 +75,7 @@ impl Feature for InstallServiceFeature {
     fn execute_service_feature(&self, argument:&Argument) -> InstallerResult<()> {
         println!("Attempt to install windows service: {}", argument.service_name.as_str().cyan());
 
-        let service_path = get_service_path(&argument).or_else(common::print_error_and_forward)?;
+        let service_path = get_service_path(&argument)?;
         println!("  Service executable path: {}", service_path.as_str().cyan());
 
         print!("Creating windows service ...");

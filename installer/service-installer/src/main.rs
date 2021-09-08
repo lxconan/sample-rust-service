@@ -1,31 +1,50 @@
 use colored::Colorize;
-use crate::error::{InstallerError, InstallerResult};
-use crate::features::install_service::InstallServiceFeature;
-use crate::features::feature_traits::Feature;
 
-mod diagnostic;
+use crate::error::{InstallerError, InstallerResult};
+use crate::features::feature_factory::FeatureFactory;
+use crate::arguments::Argument;
+use clap::{AppSettings, App, ArgMatches};
+
 mod arguments;
 mod error;
-mod installer;
-mod service_wrapper;
 mod features;
 
 fn main() -> Result<(), InstallerError> {
-    let argument = arguments::match_arguments().or_else(print_error_and_forward)?;
+    let factory = FeatureFactory::new();
+
+    let argument = match_arguments(&factory)?;
     println!("Will perform action: {} with the following arguments:", argument.action_type.as_str().cyan());
     println!("  Service name: {}", argument.service_name.as_str().cyan());
 
-    let install_feature = InstallServiceFeature {};
+    execute_feature(&factory, &argument)
+}
 
-    if argument.action_type == install_feature.get_sub_command_name() {
-        install_feature.execute_service_feature(&argument)?;
-    } else if &argument.action_type == arguments::UNINSTALL_WINDOWS_SERVICE {
-        installer::uninstall_windows_service(&argument.service_name).or_else(print_error_and_forward)?;
+fn execute_feature(feature_factory:&FeatureFactory, argument:&Argument) -> InstallerResult<()> {
+    let features = feature_factory.get_features();
+    for feature in features {
+        if argument.action_type == feature.get_sub_command_name() {
+            feature.execute_service_feature(argument)?;
+        }
     }
 
     InstallerResult::Ok(())
 }
 
-fn print_error_and_forward<T>(error: InstallerError) -> Result<T, InstallerError> {
-    diagnostic::print_error(&error.message); Result::Err(error)
+fn match_arguments(feature_factory:&FeatureFactory) -> Result<Argument, error::InstallerError> {
+    let mut app = App::new("Windows Service Installer").setting(AppSettings::SubcommandRequired);
+
+    for feature in feature_factory.get_features() {
+        app = app.subcommand(feature.create_argument_parser());
+    }
+
+    let matches: ArgMatches = app.get_matches();
+
+    for feature in feature_factory.get_features() {
+        let feature_args = feature.create_argument_from_matches(&matches)?;
+        if feature_args.is_some() {
+            return Result::Ok(feature_args.unwrap());
+        }
+    }
+
+    Result::Err(error::InstallerError::new("Not supported command."))
 }
