@@ -21,6 +21,7 @@ impl sample_rust_service_core::application::Application for Application {
     }
 
     fn run(&self, shutdown_rx: &Receiver<()>) -> ServiceResult<()> {
+        // let responder = init_zeromq_server().unwrap();
         loop {
             match shutdown_rx.try_recv() {
                 Ok(_) | Err(mpsc::TryRecvError::Disconnected) => {
@@ -29,7 +30,9 @@ impl sample_rust_service_core::application::Application for Application {
                 }
                 Err(mpsc::TryRecvError::Empty) => {
                     sample_rust_service_core::diagnostic::output_debug_string("Entering windows service loop");
-                    run_zeromq_server();
+                    thread::sleep(Duration::from_secs(2));
+                    // run_zeromq_server();
+                    // send_and_receive(&responder);
                 }
             }
         }
@@ -42,20 +45,37 @@ impl sample_rust_service_core::application::Application for Application {
     }
 }
 
-fn run_zeromq_server() {
-    let context = zmq::Context::new();
-    let responder = context.socket(zmq::REP).unwrap();
+// fn init_zeromq_server() -> ServiceResult<()>{
+//     let context = zmq::Context::new();
+//     let responder = context.socket(zmq::REP).unwrap();
 
-    assert!(responder.bind("tcp://*:5555").is_ok());
+//     if responder.bind("tcp://*:5555").is_ok() {
+//         return Ok(responder);
+//     } else {
+//         return ServiceResult::Err(ServiceError::new("init socket failed."));
+//     }
+// }
 
-    let mut msg = zmq::Message::new();
-    let mut message_cnt = 0;
-    loop {
-        responder.recv(&mut msg, 0).unwrap();
-        message_cnt = message_cnt + 1;
-        println!("Received message {} : \"{}\"", message_cnt, msg.as_str().unwrap());
-        thread::sleep(Duration::from_millis(1000));
-        responder.send("Hello to client", 0).unwrap();
-        println!("Sending Hello to client ...");
-    }
-}
+// fn send_and_receive(responder: &Socket) {
+//     let mut msg = zmq::Message::new();
+//     responder.recv(&mut msg, 0).unwrap();
+//     println!("Received message: \"{}\"", msg.as_str().unwrap());
+//     thread::sleep(Duration::from_millis(1000));
+//     responder.send("Hello to client", 0).unwrap();
+//     println!("Sending Hello to client ...");
+// }
+
+// fn run_zeromq_server() {
+//     let context = zmq::Context::new();
+//     let responder = context.socket(zmq::REP).unwrap();
+
+//     assert!(responder.bind("tcp://*:5555").is_ok());
+
+//     let mut msg = zmq::Message::new();
+
+//     responder.recv(&mut msg, 0).unwrap();
+//     println!("Received message : \"{}\"", msg.as_str().unwrap());
+//     thread::sleep(Duration::from_millis(1000));
+//     responder.send("Hello to client", 0).unwrap();
+//     println!("Sending Hello to client ...");
+// }
