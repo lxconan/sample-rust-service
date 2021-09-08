@@ -1,8 +1,7 @@
 use std::{
     ffi::OsString,
     sync::mpsc,
-    time::Duration,
-    thread
+    time::Duration
 };
 use windows_service::{
     define_windows_service,
@@ -15,9 +14,12 @@ use windows_service::{
 };
 use sample_rust_service_core::error::{ServiceResult, ServiceError};
 use windows_service::service_control_handler::ServiceStatusHandle;
+use sample_rust_service_core::application::Application;
 
 const SERVICE_NAME: &str = "sample_service";
 const SERVICE_TYPE: ServiceType = ServiceType::OWN_PROCESS;
+
+static APPLICATION:my_business::my_application::Application = my_business::my_application::Application {};
 
 pub fn run() -> ServiceResult<()> {
     // The service_dispatcher::start() function does the same thing in a typical window
@@ -70,8 +72,8 @@ fn sample_service_main(_arguments: Vec<OsString>) {
     // Thus it will not return any state to the environment. The service just stopped if the
     // function returns. So if you want to record error message. You would better record in
     // windows event logs or in the customized log file.
-    if let Err(_e) = run_service() {
-        // Handle the error here. Logging maybe.
+    if let Err(e) = run_service() {
+        APPLICATION.handle_error(&e)
     }
 }
 
@@ -171,59 +173,20 @@ fn run_service() -> ServiceResult<()> {
     set_service_status_with_empty_control(&status_handle, ServiceState::StartPending)?;
 
     // (3) Do some initialization work here.
+    APPLICATION.initialize()?;
 
     // (4) Set service status as running.
-    // C++ equivalent
-    // ------------------------------------------------------------------------------
-    // ZeroMemory (&g_ServiceStatus, sizeof (g_ServiceStatus));
-    // g_ServiceStatus.dwServiceType = SERVICE_WIN32_OWN_PROCESS;
-    // g_ServiceStatus.dwControlsAccepted = SERVICE_ACCEPT_STOP;
-    // g_ServiceStatus.dwCurrentState = SERVICE_RUNNING;
-    // g_ServiceStatus.dwWin32ExitCode = 0;
-    // g_ServiceStatus.dwCheckPoint = 0;
-    //
-    // if (SetServiceStatus (g_StatusHandle, &g_ServiceStatus) == FALSE) {
-    //   return;
-    // }
-    // ------------------------------------------------------------------------------
     set_service_status(&status_handle, ServiceState::Running, ServiceControlAccept::STOP)?;
 
     // (5) Create a threat for the main service loop. Waiting for event to gracefully change serivce
     //     status.
-    let thread_handle = thread::spawn(move || {
-        match shutdown_rx.try_recv() {
-            Ok(_) | Err(mpsc::TryRecvError::Disconnected) => return,
-            Err(mpsc::TryRecvError::Empty) => ()
-        }
-
-        loop {
-            match shutdown_rx.try_recv() {
-                Ok(_) | Err(mpsc::TryRecvError::Disconnected) => {
-                    crate::diagnostic::output_debug_string("Ok or Disconnected received");
-                    break;
-                }
-                Err(mpsc::TryRecvError::Empty) => {
-                    crate::diagnostic::output_debug_string("Entering windows service loop");
-                    thread::sleep(Duration::from_secs(2));
-                }
-            }
-        }
-    });
-
-    match thread_handle.join() {
-        Err(_) => {
-            // We may want to record logs here. Since the next thing is to stop the service, so
-            // there is not need to exit here.
-        },
-
-        Ok(_) => () // Do nothing if joined successfully.
-    }
-    // (6) Waiting for the main service loop to exit.
+    APPLICATION.run(&shutdown_rx)?;
 
     // (7) Change service status to stop pending.
     set_service_status_with_empty_control(&status_handle, ServiceState::StopPending)?;
 
     // (8) Do some recycle work here.
+    APPLICATION.shutting_down()?;
 
     // (9) Change service status to stop.
     set_service_status_with_empty_control(&status_handle, ServiceState::Stopped)?;
