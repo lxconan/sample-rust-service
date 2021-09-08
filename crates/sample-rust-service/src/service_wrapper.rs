@@ -189,20 +189,21 @@ fn run_service() -> ServiceResult<()> {
     set_service_status_with_empty_control(&status_handle, ServiceState::StartPending)?;
 
     // (3) Do some initialization work here.
-    get_application().initialize()?;
+    let application = get_application();
+    application.initialize()?;
 
     // (4) Set service status as running.
     set_service_status(&status_handle, ServiceState::Running, ServiceControlAccept::STOP)?;
 
     // (5) Create a threat for the main service loop. Waiting for event to gracefully change serivce
     //     status.
-    get_application().run(&shutdown_rx)?;
+    application.run(&shutdown_rx)?;
 
     // (7) Change service status to stop pending.
     set_service_status_with_empty_control(&status_handle, ServiceState::StopPending)?;
 
     // (8) Do some recycle work here.
-    get_application().shutting_down();
+    application.shutting_down();
 
     // (9) Change service status to stop.
     set_service_status_with_empty_control(&status_handle, ServiceState::Stopped)?;
