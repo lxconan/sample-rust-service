@@ -90,6 +90,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3cb00336871be5ed2c8ed44b60ae9959dc5b9f08539422ed43f09e34ecaeba21"
 
 [[package]]
+name = "my-business"
+version = "0.1.0"
+dependencies = [
+ "sample-rust-service-core",
+]
+
+[[package]]
 name = "once_cell"
 version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -165,6 +172,7 @@ checksum = "61b3909d758bb75c79f23d4736fac9433868679d3ad2ea7a61e3c25cfda9a088"
 name = "sample-rust-service"
 version = "0.1.0"
 dependencies = [
+ "my-business",
  "sample-rust-service-core",
  "widestring",
  "winapi",
