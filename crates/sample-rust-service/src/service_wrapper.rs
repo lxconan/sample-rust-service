@@ -18,9 +18,24 @@ use windows_service::service_control_handler::ServiceStatusHandle;
 const SERVICE_NAME: &str = "sample_service";
 const SERVICE_TYPE: ServiceType = ServiceType::OWN_PROCESS;
 
-static APPLICATION:&dyn sample_rust_service_core::application::Application = &my_business::my_application::Application {};
+static mut APPLICATION:Option<&dyn sample_rust_service_core::application::Application> = None;
 
-pub fn run() -> ServiceResult<()> {
+fn get_application() -> &'static dyn sample_rust_service_core::application::Application {
+    unsafe { APPLICATION.unwrap() }
+}
+
+fn initialize_application(application:&'static dyn sample_rust_service_core::application::Application) -> ServiceResult<()> {
+    unsafe {
+        if APPLICATION.is_some() {
+            return ServiceResult::Err(ServiceError::new("The application has already been initialized."));
+        }
+        APPLICATION = Option::Some(application);
+    }
+
+    Ok(())
+}
+
+pub fn run(application:&'static dyn sample_rust_service_core::application::Application) -> ServiceResult<()> {
     // The service_dispatcher::start() function does the same thing in a typical window
     // service. That is:
     // (1) register service entry point to the service table
@@ -41,7 +56,7 @@ pub fn run() -> ServiceResult<()> {
     //
     // return 0;
     // ------------------------------------------------------------------------------
-
+    initialize_application(application)?;
     service_dispatcher::start(SERVICE_NAME, ffi_service_main)
         .map_err(|e| { ServiceError::with(e, "Fail to call service dispatcher. ") })
 }
@@ -72,7 +87,7 @@ fn sample_service_main(_arguments: Vec<OsString>) {
     // function returns. So if you want to record error message. You would better record in
     // windows event logs or in the customized log file.
     if let Err(e) = run_service() {
-        APPLICATION.handle_error(&e)
+        get_application().handle_error(&e)
     }
 }
 
@@ -172,20 +187,20 @@ fn run_service() -> ServiceResult<()> {
     set_service_status_with_empty_control(&status_handle, ServiceState::StartPending)?;
 
     // (3) Do some initialization work here.
-    APPLICATION.initialize()?;
+    get_application().initialize()?;
 
     // (4) Set service status as running.
     set_service_status(&status_handle, ServiceState::Running, ServiceControlAccept::STOP)?;
 
     // (5) Create a threat for the main service loop. Waiting for event to gracefully change serivce
     //     status.
-    APPLICATION.run(&shutdown_rx)?;
+    get_application().run(&shutdown_rx)?;
 
     // (7) Change service status to stop pending.
     set_service_status_with_empty_control(&status_handle, ServiceState::StopPending)?;
 
     // (8) Do some recycle work here.
-    APPLICATION.shutting_down();
+    get_application().shutting_down();
 
     // (9) Change service status to stop.
     set_service_status_with_empty_control(&status_handle, ServiceState::Stopped)?;
