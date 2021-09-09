@@ -213,8 +213,8 @@ fn run_service() -> ServiceResult<()> {
         }
     });
 
-    let exit_signal_in_worker_process = exit_signal.clone();
-    application.run(exit_signal_in_worker_process)?;
+    let exit_signal_for_application = exit_signal.clone();
+    application.run(exit_signal_for_application)?;
 
     signal_loop_thread_handle.join().unwrap_or_else(|e| {
         output_debug_string(format!("Error occurred while joining signal thread: {:?}", e));

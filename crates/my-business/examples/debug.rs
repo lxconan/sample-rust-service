@@ -1,18 +1,18 @@
 use my_business::my_application::Application as BusinessApplication;
 use sample_rust_service_core::application::Application;
 use sample_rust_service_core::error::{ServiceResult, ServiceError};
-use std::sync::mpsc;
+use std::sync::{Arc};
 use std::io::{stdin};
+use std::sync::atomic::{AtomicBool, Ordering};
 
 fn main() -> ServiceResult<()> {
-    let (shutdown_tx, shutdown_rx) = mpsc::channel();
+    let exit_signal = Arc::new(AtomicBool::new(false));
 
-    let handle = std::thread::spawn(|| -> ServiceResult<()> {
-        let receiver = shutdown_rx;
-
+    let exit_signal_for_thread = exit_signal.clone();
+    let handle = std::thread::spawn(move || -> ServiceResult<()> {
         let application = BusinessApplication {};
         application.initialize()?;
-        application.run(&receiver)?;
+        application.run(exit_signal_for_thread)?;
         application.shutting_down();
         Ok(())
     });
@@ -23,7 +23,8 @@ fn main() -> ServiceResult<()> {
     stdin().read_line(&mut user_input).map_err(|e| { ServiceError::with(e, "IO error. ") })?;
 
     println!("Application is about to exit!");
-    shutdown_tx.send(()).map_err(|e| { ServiceError::with(e, "Stop signal sending error. ") })?;
+    exit_signal.store(true, Ordering::SeqCst);
+
     match handle.join() {
         Ok(_) => { return Ok(()); }
         Err(_) => { return ServiceResult::Err(ServiceError::new("Joining failed. "))}
