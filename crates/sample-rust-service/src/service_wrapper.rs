@@ -1,8 +1,4 @@
-use std::{
-    ffi::OsString,
-    sync::mpsc,
-    time::Duration
-};
+use std::{ffi::OsString, sync::mpsc, time::Duration, thread};
 use windows_service::{
     define_windows_service,
     service::{
@@ -14,6 +10,9 @@ use windows_service::{
 };
 use sample_rust_service_core::error::{ServiceResult, ServiceError};
 use windows_service::service_control_handler::ServiceStatusHandle;
+use sample_rust_service_core::diagnostic::output_debug_string;
+use std::sync::atomic::{Ordering, AtomicBool};
+use std::sync::Arc;
 
 const SERVICE_NAME: &str = "sample_service";
 const SERVICE_TYPE: ServiceType = ServiceType::OWN_PROCESS;
@@ -195,9 +194,31 @@ fn run_service() -> ServiceResult<()> {
     // (4) Set service status as running.
     set_service_status(&status_handle, ServiceState::Running, ServiceControlAccept::STOP)?;
 
-    // (5) Create a threat for the main service loop. Waiting for event to gracefully change serivce
+    // (5) Create a threat for the main service loop. Waiting for event to gracefully change service
     //     status.
-    application.run(&shutdown_rx)?;
+    let exit_signal = Arc::new(AtomicBool::new(false));
+    let exit_signal_in_signal_loop = exit_signal.clone();
+    let signal_loop_thread_handle = thread::spawn(move || {
+        loop {
+            match shutdown_rx.try_recv() {
+                Ok(_) | Err(mpsc::TryRecvError::Disconnected) => {
+                    output_debug_string("Ok or Disconnected received");
+                    exit_signal_in_signal_loop.store(true, Ordering::SeqCst);
+                    break;
+                }
+                Err(mpsc::TryRecvError::Empty) => {
+                    thread::sleep(Duration::from_secs(2));
+                }
+            }
+        }
+    });
+
+    let exit_signal_in_worker_process = exit_signal.clone();
+    application.run(exit_signal_in_worker_process)?;
+
+    signal_loop_thread_handle.join().unwrap_or_else(|e| {
+        output_debug_string(format!("Error occurred while joining signal thread: {:?}", e));
+    });
 
     // (7) Change service status to stop pending.
     set_service_status_with_empty_control(&status_handle, ServiceState::StopPending)?;

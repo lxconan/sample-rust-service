@@ -1,9 +1,10 @@
 use crate::error::{ServiceError, ServiceResult};
-use std::sync::mpsc::Receiver;
+use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 
 pub trait Application {
     fn handle_error(&self, error:&ServiceError);
     fn initialize(&self) -> ServiceResult<()> { Ok(()) }
-    fn run(&self, shutdown_rx:&Receiver<()>) -> ServiceResult<()>;
+    fn run(&self, exit_signal:Arc<AtomicBool>) -> ServiceResult<()>;
     fn shutting_down(&self) {}
 }
