@@ -1,0 +1,1 @@
+sc.exe queryex "sample-rust-service"
