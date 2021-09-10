@@ -1,4 +1,4 @@
-use std::{ffi::OsString, sync::mpsc, time::Duration, thread};
+use std::{ffi::OsString, time::Duration, thread};
 use windows_service::{
     define_windows_service,
     service::{
@@ -13,30 +13,24 @@ use windows_service::service_control_handler::ServiceStatusHandle;
 use sample_rust_service_core::diagnostic::output_debug_string;
 use std::sync::atomic::{Ordering, AtomicBool};
 use std::sync::Arc;
+use sample_rust_service_core::application::SimpleApplication;
+use std::thread::JoinHandle;
 
 const SERVICE_NAME: &str = "sample_service";
 const SERVICE_TYPE: ServiceType = ServiceType::OWN_PROCESS;
 
-static mut APPLICATION:Option<Box<dyn sample_rust_service_core::application::Application>> = None;
+static mut APPLICATION:Vec<fn() -> Box<dyn SimpleApplication>> = Vec::new();
 
-fn get_application() -> &'static Box<dyn sample_rust_service_core::application::Application> {
-    unsafe {
-        APPLICATION.as_ref().unwrap()
-    }
+fn get_application() -> &'static Vec<fn() -> Box<dyn SimpleApplication>> {
+    unsafe { &APPLICATION }
 }
 
-fn initialize_application(application:Box<dyn sample_rust_service_core::application::Application>) -> ServiceResult<()> {
-    unsafe {
-        if APPLICATION.is_some() {
-            return ServiceResult::Err(ServiceError::new("The application has already been initialized."));
-        }
-        APPLICATION = Option::Some(application);
-    }
-
+fn initialize_application(factories:Vec<fn() -> Box<dyn SimpleApplication>>) -> ServiceResult<()> {
+    unsafe { APPLICATION = factories; }
     Ok(())
 }
 
-pub fn run(application:Box<dyn sample_rust_service_core::application::Application>) -> ServiceResult<()> {
+pub fn run(factories:Vec<fn() -> Box<dyn SimpleApplication>>) -> ServiceResult<()> {
     // The service_dispatcher::start() function does the same thing in a typical window
     // service. That is:
     // (1) register service entry point to the service table
@@ -57,7 +51,7 @@ pub fn run(application:Box<dyn sample_rust_service_core::application::Applicatio
     //
     // return 0;
     // ------------------------------------------------------------------------------
-    initialize_application(application)?;
+    initialize_application(factories)?;
     service_dispatcher::start(SERVICE_NAME, ffi_service_main)
         .map_err(|e| { ServiceError::with(e, "Fail to call service dispatcher. ") })
 }
@@ -87,9 +81,7 @@ fn sample_service_main(_arguments: Vec<OsString>) {
     // Thus it will not return any state to the environment. The service just stopped if the
     // function returns. So if you want to record error message. You would better record in
     // windows event logs or in the customized log file.
-    if let Err(e) = run_service() {
-        get_application().handle_error(&e)
-    }
+    run_service().unwrap_or_else(|e| { output_debug_string(e.message)});
 }
 
 fn run_service() -> ServiceResult<()> {
@@ -115,7 +107,7 @@ fn run_service() -> ServiceResult<()> {
     // Since the status callback is an async callback. We have to had a sync mechanism to do the
     // communication. Just like a message queue. So we create a channel to send the service status
     // to the callback.
-    let (shutdown_tx, shutdown_rx) = mpsc::channel();
+    let exit_signal = Arc::new(AtomicBool::new(false));
 
     // To register the callback, we need to declare the callback first. The callback accepts the
     // desired service status (defined in service::ServiceControl) and returns the
@@ -152,6 +144,7 @@ fn run_service() -> ServiceResult<()> {
     //   }
     // }
     // ------------------------------------------------------------------------------
+    let exit_signal_for_service_event_handler = exit_signal.clone();
     let event_handler = move |control_event| -> ServiceControlHandlerResult {
         match control_event {
             // Notifies a service to report its current status information to the service
@@ -162,7 +155,7 @@ fn run_service() -> ServiceResult<()> {
 
             // Handle stop
             ServiceControl::Stop => {
-                shutdown_tx.send(()).unwrap();
+                exit_signal_for_service_event_handler.store(true, Ordering::SeqCst);
                 ServiceControlHandlerResult::NoError
             },
 
@@ -188,43 +181,33 @@ fn run_service() -> ServiceResult<()> {
     set_service_status_with_empty_control(&status_handle, ServiceState::StartPending)?;
 
     // (3) Do some initialization work here.
-    let application = get_application();
-    application.initialize()?;
+    let applications = get_application();
 
     // (4) Set service status as running.
     set_service_status(&status_handle, ServiceState::Running, ServiceControlAccept::STOP)?;
 
     // (5) Create a threat for the main service loop. Waiting for event to gracefully change service
     //     status.
-    let exit_signal = Arc::new(AtomicBool::new(false));
-    let exit_signal_in_signal_loop = exit_signal.clone();
-    let signal_loop_thread_handle = thread::spawn(move || {
-        loop {
-            match shutdown_rx.try_recv() {
-                Ok(_) | Err(mpsc::TryRecvError::Disconnected) => {
-                    output_debug_string("Ok or Disconnected received");
-                    exit_signal_in_signal_loop.store(true, Ordering::SeqCst);
-                    break;
-                }
-                Err(mpsc::TryRecvError::Empty) => {
-                    thread::sleep(Duration::from_secs(2));
-                }
-            }
-        }
-    });
+    let mut thread_handles:Vec<JoinHandle<()>> = vec![];
+    for factory in applications {
+        let exit_signal_for_app = exit_signal.clone();
+        let handle = thread::spawn(move || {
+            let app: Box<dyn SimpleApplication> = factory();
+            app.run(exit_signal_for_app).unwrap_or_else(|e| {
+                app.handle_error(&e);
+            });
+        });
+        thread_handles.push(handle);
+    }
 
-    let exit_signal_for_application = exit_signal.clone();
-    application.run(exit_signal_for_application)?;
-
-    signal_loop_thread_handle.join().unwrap_or_else(|e| {
-        output_debug_string(format!("Error occurred while joining signal thread: {:?}", e));
-    });
+    for handle in thread_handles {
+        handle.join().unwrap_or_else(|e|{
+            output_debug_string(format!("{:?}", e));
+        });
+    }
 
     // (7) Change service status to stop pending.
     set_service_status_with_empty_control(&status_handle, ServiceState::StopPending)?;
-
-    // (8) Do some recycle work here.
-    application.shutting_down();
 
     // (9) Change service status to stop.
     set_service_status_with_empty_control(&status_handle, ServiceState::Stopped)?;

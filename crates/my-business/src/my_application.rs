@@ -5,25 +5,28 @@ use std::thread;
 use std::time::Duration;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-pub struct Application {
-}
+pub struct WorkerApplicationOne {}
 
-impl sample_rust_service_core::application::Application for Application {
-    fn handle_error(&self, _error: &ServiceError) {
-        output_debug_string("Application::handle_error() called");
+impl sample_rust_service_core::application::SimpleApplication for WorkerApplicationOne {
+    fn handle_error(&self, error: &ServiceError) {
+        output_debug_string(format!("Application error: {:?}", error));
     }
 
     fn run(&self, exit_signal: Arc<AtomicBool>) -> ServiceResult<()> {
-        let exit_signal_for_worker_one = exit_signal.clone();
-        let thread_handle_worker_one = thread::spawn(move || { do_some_work(String::from("Worker 1"), exit_signal_for_worker_one); });
+        do_some_work(String::from("Worker 1"), exit_signal);
+        Ok(())
+    }
+}
 
-        let exit_signal_for_worker_two = exit_signal.clone();
-        let thread_handle_worker_two = thread::spawn(move || { do_some_work(String::from("Worker 2"), exit_signal_for_worker_two); });
+pub struct WorkerApplicationTwo {}
 
-        thread_handle_worker_two.join().unwrap_or_else(|e| { output_debug_string(format!("Failure occurred when joining thread: {:?}", e)) });
-        thread_handle_worker_one.join().unwrap_or_else(|e| { output_debug_string(format!("Failure occurred when joining thread: {:?}", e)) });
+impl sample_rust_service_core::application::SimpleApplication for WorkerApplicationTwo {
+    fn handle_error(&self, error: &ServiceError) {
+        output_debug_string(format!("Application error: {:?}", error));
+    }
 
-        output_debug_string("Application::run() exits");
+    fn run(&self, exit_signal: Arc<AtomicBool>) -> ServiceResult<()> {
+        do_some_work(String::from("Worker 2"), exit_signal);
         Ok(())
     }
 }

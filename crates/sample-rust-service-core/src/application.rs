@@ -8,3 +8,8 @@ pub trait Application {
     fn run(&self, exit_signal:Arc<AtomicBool>) -> ServiceResult<()>;
     fn shutting_down(&self) {}
 }
+
+pub trait SimpleApplication {
+    fn handle_error(&self, error:&ServiceError);
+    fn run(&self, exit_signal:Arc<AtomicBool>) -> ServiceResult<()>;
+}

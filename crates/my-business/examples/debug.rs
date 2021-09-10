@@ -1,5 +1,5 @@
-use my_business::my_application::Application as BusinessApplication;
-use sample_rust_service_core::application::Application;
+use my_business::my_application::WorkerApplicationOne as BusinessApplication;
+use sample_rust_service_core::application::{SimpleApplication};
 use sample_rust_service_core::error::{ServiceResult, ServiceError};
 use std::sync::{Arc};
 use std::io::{stdin};
@@ -11,9 +11,7 @@ fn main() -> ServiceResult<()> {
     let exit_signal_for_thread = exit_signal.clone();
     let handle = std::thread::spawn(move || -> ServiceResult<()> {
         let application = BusinessApplication {};
-        application.initialize()?;
         application.run(exit_signal_for_thread)?;
-        application.shutting_down();
         Ok(())
     });
 
