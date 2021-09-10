@@ -1,7 +1,7 @@
 use colored::Colorize;
 
 use crate::error::{InstallerError, InstallerResult};
-use crate::features::feature_factory::FeatureFactory;
+use crate::features::features::FeatureFactory;
 use crate::arguments::Argument;
 use clap::{AppSettings, App, ArgMatches};
 
@@ -14,7 +14,7 @@ fn main() -> Result<(), InstallerError> {
 
     let argument = match_arguments(&factory)?;
     println!("Will perform action: {} with the following arguments:", argument.action_type.as_str().cyan());
-    println!("  Service name: {}", argument.service_name.as_str().cyan());
+    println!("Service name:                           {}", argument.service_name.as_str().cyan());
 
     execute_feature(&factory, &argument)
 }

@@ -1,6 +1,7 @@
-pub mod feature_traits;
+pub mod features;
 pub mod common;
 pub mod install_service;
 pub mod uninstall_service;
-pub mod feature_factory;
+pub mod query_service;
+pub mod start_service;
 mod service_wrapper;

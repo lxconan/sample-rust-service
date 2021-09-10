@@ -1,4 +1,4 @@
-use crate::features::feature_traits::Feature;
+use crate::features::features::Feature;
 use clap::{App, SubCommand, Arg, ArgMatches};
 use crate::arguments::Argument;
 use crate::error::{InstallerResult, InstallerError};

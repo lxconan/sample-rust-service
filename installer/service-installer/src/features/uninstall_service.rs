@@ -1,4 +1,4 @@
-use crate::features::feature_traits::Feature;
+use crate::features::features::Feature;
 use clap::{App, ArgMatches, SubCommand, Arg};
 use crate::error::{InstallerResult, InstallerError};
 use crate::arguments::Argument;
@@ -44,7 +44,7 @@ impl Feature for UninstallServiceFeature {
     }
 
     fn execute_service_feature(&self, argument: &Argument) -> InstallerResult<()> {
-        println!("Attempt to uninstall windows service: {}", argument.service_name.as_str().cyan());
+        println!("Attempt to uninstall windows service:   {}", argument.service_name.as_str().cyan());
 
         let context = WindowsServiceOperatingContext::from(
             &argument.service_name,

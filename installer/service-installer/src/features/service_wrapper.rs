@@ -2,9 +2,9 @@ use core::option::Option::None;
 use core::result::Result;
 use core::result::Result::Ok;
 use core::time;
-use crate::error::InstallerError;
+use crate::error::{InstallerError, InstallerResult};
 use std::thread;
-use std::ffi::OsString;
+use std::ffi::{OsString};
 use windows_service::service::{Service, ServiceAccess, ServiceErrorControl, ServiceInfo, ServiceStartType, ServiceState, ServiceStatus, ServiceType};
 use windows_service::service_manager::{ServiceManager, ServiceManagerAccess};
 
@@ -69,6 +69,13 @@ impl WindowsServiceOperatingContext {
         self.service.stop()
             .and_then(|_| { Result::Ok(())})
             .or_else(|e| { Result::Err(InstallerError::with(e, "Stop service failed. ")) })
+    }
+
+    pub fn start_service(&self) -> InstallerResult<()> {
+        let empty_arguments:[String; 0] = [];
+        self.service.start(&empty_arguments)
+            .and_then(|_| { Result::Ok(()) })
+            .or_else(|e| { InstallerResult::Err(InstallerError::with(e, "Start service failed. ")) })
     }
 
     pub fn uninstall_service(self) -> Result<(), InstallerError> {
