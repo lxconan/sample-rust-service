@@ -6,11 +6,15 @@ use std::io::{stdin};
 use std::sync::atomic::{AtomicBool, Ordering};
 
 fn main() -> ServiceResult<()> {
+    simulate(|| { Box::new(BusinessApplication {}) })
+}
+
+fn simulate(application_factory:fn() -> Box<dyn SimpleApplication>) -> ServiceResult<()> {
     let exit_signal = Arc::new(AtomicBool::new(false));
 
     let exit_signal_for_thread = exit_signal.clone();
     let handle = std::thread::spawn(move || -> ServiceResult<()> {
-        let application = BusinessApplication {};
+        let application = application_factory();
         application.run(exit_signal_for_thread)?;
         Ok(())
     });
@@ -23,8 +27,8 @@ fn main() -> ServiceResult<()> {
     println!("Application is about to exit!");
     exit_signal.store(true, Ordering::SeqCst);
 
-    match handle.join() {
-        Ok(_) => { return Ok(()); }
-        Err(_) => { return ServiceResult::Err(ServiceError::new("Joining failed. "))}
+    return match handle.join() {
+        Ok(_) => { Ok(()) }
+        Err(_) => { ServiceResult::Err(ServiceError::new("Joining failed. ")) }
     }
 }
