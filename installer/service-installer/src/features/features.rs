@@ -8,7 +8,7 @@ use crate::features::start_service::StartServiceFeature;
 
 pub trait Feature {
     fn create_argument_parser(&self) -> clap::App;
-    fn create_argument_from_matches(&self, matches:&ArgMatches) -> InstallerResult<Option<Argument>>;
+    fn create_argument_from_matches(&self, sub_command_matches:&ArgMatches) -> InstallerResult<Option<Argument>>;
     fn execute_service_feature(&self, argument:&Argument) -> InstallerResult<()>;
     fn get_sub_command_name(&self) -> String;
 }

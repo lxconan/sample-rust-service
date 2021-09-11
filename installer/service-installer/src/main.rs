@@ -40,7 +40,13 @@ fn match_arguments(feature_factory:&FeatureFactory) -> Result<Argument, error::I
     let matches: ArgMatches = app.get_matches();
 
     for feature in feature_factory.get_features() {
-        let feature_args = feature.create_argument_from_matches(&matches)?;
+        let sub_command_name = feature.get_sub_command_name();
+        let sub_command_matches_option = matches.subcommand_matches(&sub_command_name);
+        if sub_command_matches_option.is_none() {
+            continue;
+        }
+
+        let feature_args = feature.create_argument_from_matches(sub_command_matches_option.unwrap())?;
         if feature_args.is_some() {
             return Result::Ok(feature_args.unwrap());
         }

@@ -9,67 +9,61 @@ use path_absolutize::Absolutize;
 pub struct InstallServiceFeature {
 }
 
-const INSTALL_WINDOWS_SERVICE: &str = "create";
-const SERVICE_NAME_ARGUMENT:&str = "service name";
-const DISPLAY_NAME_ARGUMENT:&str = "display name";
-const DESCRIPTION_ARGUMENT:&str = "description";
-const AUTO_START_SWITCH:&str = "auto start";
-const SERVICE_PATH_ARGUMENT:&str = "service executable path";
+const COMMAND_NAME: &str = "create";
+const SERVICE_NAME_KEY:&str = "service name";
+const DISPLAY_NAME_KEY:&str = "display name";
+const DESCRIPTION_KEY:&str = "description";
+const AUTO_START_SWITCH_KEY:&str = "auto start";
+const SERVICE_PATH_KEY:&str = "service executable path";
 
 impl Feature for InstallServiceFeature {
     fn create_argument_parser(&self) -> App {
-        SubCommand::with_name(INSTALL_WINDOWS_SERVICE)
+        SubCommand::with_name(COMMAND_NAME)
             .about("Install windows service on local machine.")
             .arg(
-                Arg::with_name(SERVICE_NAME_ARGUMENT)
+                Arg::with_name(SERVICE_NAME_KEY)
                     .long("name")
                     .required(true)
                     .multiple(false)
                     .takes_value(true)
             )
             .arg(
-                Arg::with_name(DISPLAY_NAME_ARGUMENT)
+                Arg::with_name(DISPLAY_NAME_KEY)
                     .long("disp")
                     .required(true)
                     .multiple(false)
                     .takes_value(true)
             )
             .arg(
-                Arg::with_name(DESCRIPTION_ARGUMENT)
+                Arg::with_name(DESCRIPTION_KEY)
                     .long("desc")
                     .required(true)
                     .multiple(false)
                     .takes_value(true)
             )
             .arg(
-                Arg::with_name(AUTO_START_SWITCH)
+                Arg::with_name(AUTO_START_SWITCH_KEY)
                     .long("auto")
                     .required(false)
                     .multiple(false)
                     .takes_value(false)
             )
             .arg(
-                Arg::with_name(SERVICE_PATH_ARGUMENT)
+                Arg::with_name(SERVICE_PATH_KEY)
                     .long("bin")
                     .required(true)
                     .multiple(false)
                     .takes_value(true)
             )
     }
-    fn create_argument_from_matches(&self, matches: &ArgMatches) -> InstallerResult<Option<Argument>> {
-        let sub_command_matches_option = matches.subcommand_matches(INSTALL_WINDOWS_SERVICE);
-        if sub_command_matches_option.is_none() {
-            return InstallerResult::Ok(Option::None);
-        }
-
-        let sub_command_matches = sub_command_matches_option.unwrap();
+    fn create_argument_from_matches(&self, sub_command_matches: &ArgMatches) -> InstallerResult<Option<Argument>> {
         return InstallerResult::Ok(Option::Some(Argument {
-            action_type: String::from(INSTALL_WINDOWS_SERVICE),
-            executable_path: String::from(sub_command_matches.value_of(SERVICE_PATH_ARGUMENT).ok_or(InstallerError::new("Invalid service path argument."))?),
-            service_name: String::from(sub_command_matches.value_of(SERVICE_NAME_ARGUMENT).ok_or(InstallerError::new("Invalid service name."))?),
-            display_name: String::from(sub_command_matches.value_of(DISPLAY_NAME_ARGUMENT).ok_or(InstallerError::new("Invalid display name."))?),
-            description: String::from(sub_command_matches.value_of(DESCRIPTION_ARGUMENT).ok_or(InstallerError::new("Invalid description."))?),
-            auto_start: sub_command_matches.is_present(AUTO_START_SWITCH)
+            action_type: String::from(COMMAND_NAME),
+            executable_path: String::from(sub_command_matches.value_of(SERVICE_PATH_KEY).ok_or(InstallerError::new("Invalid service path argument."))?),
+            service_name: String::from(sub_command_matches.value_of(SERVICE_NAME_KEY).ok_or(InstallerError::new("Invalid service name."))?),
+            display_name: String::from(sub_command_matches.value_of(DISPLAY_NAME_KEY).ok_or(InstallerError::new("Invalid display name."))?),
+            description: String::from(sub_command_matches.value_of(DESCRIPTION_KEY).ok_or(InstallerError::new("Invalid description."))?),
+            auto_start: sub_command_matches.is_present(AUTO_START_SWITCH_KEY)
         }));
     }
     fn execute_service_feature(&self, argument:&Argument) -> InstallerResult<()> {
@@ -90,7 +84,7 @@ impl Feature for InstallServiceFeature {
     }
 
     fn get_sub_command_name(&self) -> String {
-        return String::from(INSTALL_WINDOWS_SERVICE);
+        return String::from(COMMAND_NAME);
     }
 }
 
