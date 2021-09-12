@@ -1,4 +1,4 @@
-use sample_rust_service_core::error::{ServiceError, ServiceResult};
+use windows_service_rs_core::error::{ServiceError, ServiceResult};
 use std::sync::{Arc};
 use std::thread;
 use std::time::Duration;
@@ -6,7 +6,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 pub struct WorkerApplicationOne {}
 
-impl sample_rust_service_core::application::SimpleApplication for WorkerApplicationOne {
+impl windows_service_rs_core::application::SimpleApplication for WorkerApplicationOne {
     fn handle_error(&self, error: &ServiceError) {
         log::error!("Application error: {:?}", error);
     }
@@ -19,7 +19,7 @@ impl sample_rust_service_core::application::SimpleApplication for WorkerApplicat
 
 pub struct WorkerApplicationTwo {}
 
-impl sample_rust_service_core::application::SimpleApplication for WorkerApplicationTwo {
+impl windows_service_rs_core::application::SimpleApplication for WorkerApplicationTwo {
     fn handle_error(&self, error: &ServiceError) {
         log::error!("Application error: {:?}", error);
     }

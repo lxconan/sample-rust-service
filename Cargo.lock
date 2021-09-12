@@ -139,8 +139,8 @@ name = "my-business"
 version = "0.1.0"
 dependencies = [
  "log",
- "sample-rust-service-core",
  "simple_logger",
+ "windows-service-rs-core",
 ]
 
 [[package]]
@@ -240,20 +240,11 @@ version = "0.1.0"
 dependencies = [
  "log",
  "my-business",
- "sample-rust-service-core",
  "simple_logger",
  "widestring",
  "winapi",
  "windows-service",
-]
-
-[[package]]
-name = "sample-rust-service-core"
-version = "0.1.0"
-dependencies = [
- "log",
- "widestring",
- "winapi",
+ "windows-service-rs-core",
 ]
 
 [[package]]
@@ -395,6 +386,15 @@ checksum = "0c643e10139d127d30d6d753398c8a6f0a43532e8370f6c9d29ebbff29b984ab"
 dependencies = [
  "bitflags",
  "err-derive",
+ "widestring",
+ "winapi",
+]
+
+[[package]]
+name = "windows-service-rs-core"
+version = "0.1.0"
+dependencies = [
+ "log",
  "widestring",
  "winapi",
 ]

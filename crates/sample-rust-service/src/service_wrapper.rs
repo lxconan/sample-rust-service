@@ -8,11 +8,11 @@ use windows_service::{
     service_control_handler::{self, ServiceControlHandlerResult},
     service_dispatcher
 };
-use sample_rust_service_core::error::{ServiceResult, ServiceError};
+use windows_service_rs_core::error::{ServiceResult, ServiceError};
 use windows_service::service_control_handler::ServiceStatusHandle;
 use std::sync::atomic::{Ordering, AtomicBool};
 use std::sync::Arc;
-use sample_rust_service_core::application::SimpleApplication;
+use windows_service_rs_core::application::SimpleApplication;
 use std::thread::JoinHandle;
 
 const SERVICE_NAME: &str = "sample_service";

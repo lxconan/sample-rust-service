@@ -1,10 +1,10 @@
 use my_business::my_application::WorkerApplicationOne as BusinessApplication;
-use sample_rust_service_core::application::{SimpleApplication};
-use sample_rust_service_core::error::{ServiceResult, ServiceError};
+use windows_service_rs_core::application::{SimpleApplication};
+use windows_service_rs_core::error::{ServiceResult, ServiceError};
 use std::sync::{Arc};
 use std::io::{stdin};
 use std::sync::atomic::{AtomicBool, Ordering};
-use sample_rust_service_core::win_dbg_logger;
+use windows_service_rs_core::win_dbg_logger;
 
 fn main() -> ServiceResult<()> {
     win_dbg_logger::init();

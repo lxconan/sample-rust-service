@@ -1,11 +1,11 @@
-use sample_rust_service_core::error::ServiceResult;
-use sample_rust_service_core::application::SimpleApplication;
+use windows_service_rs_core::error::ServiceResult;
+use windows_service_rs_core::application::SimpleApplication;
 
 mod service_wrapper;
 
 #[cfg(debug_assertions)]
 macro_rules! init_logger {
-    () => { sample_rust_service_core::win_dbg_logger::init(); }
+    () => { windows_service_rs_core::win_dbg_logger::init(); }
 }
 
 #[cfg(not(debug_assertions))]
