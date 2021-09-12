@@ -2,7 +2,6 @@
 name = "windows-service-rs-core"
 version = "0.1.0"
 description = "A library that wraps Windows Service core processes. You can easily build multi-task Windows Service using this library."
-readme = "README.md"
 authors = ["Liu Xia", "Gao Yuxia"]
 keywords = ["windows", "service"]
 categories = ["os::windows-apis"]
