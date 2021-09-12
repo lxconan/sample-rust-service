@@ -10,7 +10,6 @@ use windows_service::{
 };
 use sample_rust_service_core::error::{ServiceResult, ServiceError};
 use windows_service::service_control_handler::ServiceStatusHandle;
-use sample_rust_service_core::diagnostic::output_debug_string;
 use std::sync::atomic::{Ordering, AtomicBool};
 use std::sync::Arc;
 use sample_rust_service_core::application::SimpleApplication;
@@ -81,7 +80,7 @@ fn sample_service_main(_arguments: Vec<OsString>) {
     // Thus it will not return any state to the environment. The service just stopped if the
     // function returns. So if you want to record error message. You would better record in
     // windows event logs or in the customized log file.
-    run_service().unwrap_or_else(|e| { output_debug_string(e.message)});
+    run_service().unwrap_or_else(|e| { log::error!("{}", e.message) });
 }
 
 fn run_service() -> ServiceResult<()> {
@@ -202,7 +201,7 @@ fn run_service() -> ServiceResult<()> {
 
     for handle in thread_handles {
         handle.join().unwrap_or_else(|e|{
-            output_debug_string(format!("{:?}", e));
+            log::error!("Application error: {:?}", e);
         });
     }
 
@@ -213,6 +212,7 @@ fn run_service() -> ServiceResult<()> {
     set_service_status_with_empty_control(&status_handle, ServiceState::Stopped)?;
 
     // (10) Exit.
+    log::info!("All done. Exit windows service.");
     Ok(())
 }
 
@@ -231,6 +231,7 @@ fn set_service_status(
     desired_status:ServiceState,
     valid_controls:ServiceControlAccept
 ) -> ServiceResult<()> {
+    log::info!("Setting service status for {}: {:?}.", SERVICE_NAME, desired_status);
     status_handle.set_service_status(ServiceStatus {
         service_type: SERVICE_TYPE,
         current_state: desired_status,

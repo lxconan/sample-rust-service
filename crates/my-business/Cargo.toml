@@ -7,3 +7,7 @@ edition = "2018"
 
 [dependencies]
 sample-rust-service-core= { path = "../sample-rust-service-core" }
+log = "0.4.14"
+
+[dev-dependencies]
+simple_logger = "1.13.0"

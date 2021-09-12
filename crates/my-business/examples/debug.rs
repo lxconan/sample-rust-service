@@ -4,8 +4,10 @@ use sample_rust_service_core::error::{ServiceResult, ServiceError};
 use std::sync::{Arc};
 use std::io::{stdin};
 use std::sync::atomic::{AtomicBool, Ordering};
+use sample_rust_service_core::win_dbg_logger;
 
 fn main() -> ServiceResult<()> {
+    win_dbg_logger::init();
     simulate(|| { Box::new(BusinessApplication {}) })
 }
 

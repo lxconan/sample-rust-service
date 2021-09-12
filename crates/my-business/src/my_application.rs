@@ -1,5 +1,4 @@
 use sample_rust_service_core::error::{ServiceError, ServiceResult};
-use sample_rust_service_core::diagnostic::output_debug_string;
 use std::sync::{Arc};
 use std::thread;
 use std::time::Duration;
@@ -9,7 +8,7 @@ pub struct WorkerApplicationOne {}
 
 impl sample_rust_service_core::application::SimpleApplication for WorkerApplicationOne {
     fn handle_error(&self, error: &ServiceError) {
-        output_debug_string(format!("Application error: {:?}", error));
+        log::error!("Application error: {:?}", error);
     }
 
     fn run(&self, exit_signal: Arc<AtomicBool>) -> ServiceResult<()> {
@@ -22,7 +21,7 @@ pub struct WorkerApplicationTwo {}
 
 impl sample_rust_service_core::application::SimpleApplication for WorkerApplicationTwo {
     fn handle_error(&self, error: &ServiceError) {
-        output_debug_string(format!("Application error: {:?}", error));
+        log::error!("Application error: {:?}", error);
     }
 
     fn run(&self, exit_signal: Arc<AtomicBool>) -> ServiceResult<()> {
@@ -32,12 +31,9 @@ impl sample_rust_service_core::application::SimpleApplication for WorkerApplicat
 }
 
 fn do_some_work(name: String, exit_signal: Arc<AtomicBool>) {
-    let running_message = format!("Thread is running - {}", &name);
-    let exit_message = format!("Thread will exit - {}", &name);
-
     while !exit_signal.load(Ordering::SeqCst) {
-        output_debug_string(&running_message);
+        log::info!("Thread is running - {}", &name);
         thread::sleep(Duration::from_secs(2));
     }
-    output_debug_string(&exit_message);
+    log::info!("Thread will exit - {}", &name);
 }
