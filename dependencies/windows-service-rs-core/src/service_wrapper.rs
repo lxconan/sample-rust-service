@@ -8,12 +8,12 @@ use windows_service::{
     service_control_handler::{self, ServiceControlHandlerResult},
     service_dispatcher
 };
-use windows_service_rs_core::error::{ServiceResult, ServiceError};
+use crate::error::{ServiceResult, ServiceError};
 use windows_service::service_control_handler::ServiceStatusHandle;
 use std::sync::atomic::{Ordering, AtomicBool};
 use std::sync::Arc;
-use windows_service_rs_core::application::SimpleApplication;
 use std::thread::JoinHandle;
+use crate::application::SimpleApplication;
 
 const SERVICE_NAME: &str = "sample_service";
 const SERVICE_TYPE: ServiceType = ServiceType::OWN_PROCESS;

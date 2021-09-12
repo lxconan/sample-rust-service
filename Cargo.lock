@@ -241,9 +241,6 @@ dependencies = [
  "log",
  "my-business",
  "simple_logger",
- "widestring",
- "winapi",
- "windows-service",
  "windows-service-rs-core",
 ]
 
@@ -397,4 +394,5 @@ dependencies = [
  "log",
  "widestring",
  "winapi",
+ "windows-service",
 ]

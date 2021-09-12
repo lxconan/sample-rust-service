@@ -1,7 +1,6 @@
-use windows_service_rs_core::error::ServiceResult;
 use windows_service_rs_core::application::SimpleApplication;
-
-mod service_wrapper;
+use windows_service_rs_core::error::ServiceResult;
+use windows_service_rs_core::service_wrapper;
 
 #[cfg(debug_assertions)]
 macro_rules! init_logger {
@@ -15,9 +14,7 @@ macro_rules! init_logger {
 
 fn main() -> ServiceResult<()> {
     init_logger!();
-    log::info!("Creating applications factory");
-    let application1:fn()->Box<dyn SimpleApplication> = || {Box::new(my_business::my_application::WorkerApplicationOne {})};
-    let application2:fn()->Box<dyn SimpleApplication> = || {Box::new(my_business::my_application::WorkerApplicationTwo {})};
-    log::info!("Initialize service wrapper");
-    service_wrapper::run(vec![application1, application2])
+    let application1_factory:fn() ->Box<dyn SimpleApplication> = || {Box::new(my_business::my_application::WorkerApplicationOne {})};
+    let application2_factory:fn() ->Box<dyn SimpleApplication> = || {Box::new(my_business::my_application::WorkerApplicationTwo {})};
+    service_wrapper::run(vec![application1_factory, application2_factory])
 }
