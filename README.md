@@ -4,7 +4,7 @@ This repository demonstrates how to use *windows-service-rs-core* to easily crea
 
 Create an isolated multi-task Windows Service focusing only on your business logic.
 Service stop event notification to gracefully stop tasks.
-Log events which can be displayed on WinDBG, Visual Studio Debuggers and Windows DebugView (Sysinternal tools). 
+Log events which can be displayed on WinDBG, Visual Studio Debuggers and Windows DebugView [Sysinternals Suite](https://docs.microsoft.com/zh-cn/sysinternals/downloads/sysinternals-suite).
 We also provide an installer program so that you can easily create install/uninstall as well as service controlling program.
 
 # How to create a Windows Service Application
@@ -62,7 +62,7 @@ The run function is where business logic locates. There are two things that `run
 * Executing business logic.
 * Exit the function when `exit_signal` is `true`.
 
-So in the above example, the `run` function will invoke an infinit loop which usually occurs in a business application (E.g. Socket listening and responding). It will query the `exit_signal` in each iteration and exit the loop once it turns to `true`:
+So in the above example, the `run` function will invoke an infinite loop which usually occurs in a business application (E.g. Socket listening and responding). It will query the `exit_signal` in each iteration and exit the loop once it turns to `true`:
 
 ```rust
 fn do_some_work(name: String, exit_signal: Arc<AtomicBool>) {
@@ -76,7 +76,7 @@ fn do_some_work(name: String, exit_signal: Arc<AtomicBool>) {
 }
 ```
 
-As you can see, it is pretty strength forward to create business application project. Since there will be multiple applications run simuteniously, we need to be able to debug each application. To do that, we can create a simulator in the *examples* folder. For example:
+As you can see, it is pretty straightforward to create business application project. Since there will be multiple applications run simultaneously, we need to be able to debug each application. To do that, we can create a simulator in the *examples* folder. For example:
 
 ```rust
 fn main() -> ServiceResult<()> {
@@ -152,7 +152,7 @@ fn main() -> ServiceResult<()> {
 }
 ```
 
-The the example above, we create 2 business applications, these 2 applications will run simulteniously in the Windows Service Host application.
+As the example above, we create 2 business applications, these 2 applications will run simultaneously in the Windows Service Host application.
 
 # Install/Uninstall & Debug
 
@@ -161,12 +161,12 @@ Now that we create all the applications, we can build and install the services t
 You can execute the following powershell script to install the sample service:
 
 * `./build.ps1` This script builds the whole workspace. If you want a release build, run `./build -Release`
-* `./install.ps1` This script install current windows services to the service control manager. If you want to install a release build, run `./install -Release`
-* `./uninstall.ps1` This script uninstall current windows services. This script will try stop the service before uninstalling.
-* `./start-service.ps1` This script starts installed windows service.
-* `./stop-service.ps1` This script stops installed windows service.
+* `./install.ps1` This script install current Windows services to the service control manager. If you want to install a release build, run `./install -Release`
+* `./uninstall.ps1` This script uninstall current Windows services. This script will try stop the service before uninstalling.
+* `./start-service.ps1` This script starts installed Windows service.
+* `./stop-service.ps1` This script stops installed Windows service.
 * `./query-service.ps1` This script query current status of the service.
 
-We suggest to use the scripts above (rather than *sc.exe*) because it will try to confirm service status rather than sending the command and cares nothing on the result.
+We suggest using the scripts above (rather than *sc.exe*) because it will try to confirm service status rather than sending the command and cares nothing on the result.
 
-When Windows Service is installed, it is not convinient to debug. You can use the debug logging feature provided by `win_dbg_logger` module. The log can be captured by debugging tools such as *DebugView*.
+When Windows Service is installed, it is not convenient to debug. You can use the debug logging feature provided by `win_dbg_logger` module. The log can be captured by debugging tools such as *DebugView*.
